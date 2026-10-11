@@ -1,0 +1,31 @@
+id: reserve_adequacy_band
+track: reserving
+family: ordered_band
+title: "Reserve adequacy band"
+description: >
+  Given the loss development summary below for a workers' compensation
+  claim, forecast which adequacy band the current case reserve falls into
+  relative to the ultimate expected loss. The answer set below is ordered
+  from most-inadequate to most-overstated; give your calibrated
+  probability for each band.
+input:
+  kind: inline
+  text: |
+    Loss development summary:
+    - Initial case reserve set at $45,000 at first report.
+    - Paid losses to date: $38,000 over 14 months; claimant is now
+      medically stationary per the latest independent medical exam.
+    - Comparable claims in this injury category (lower back strain,
+      surgery not indicated) settle in the $55,000-$70,000 range at
+      ultimate.
+    - Current case reserve: $52,000.
+answer_set: ["severely_under", "under", "adequate", "over", "severely_over"]
+ground_truth:
+  label: "under"
+scoring:
+  metric: ordered_band
+baseline:
+  strategy: majority_class
+  label: "adequate"
+oracle:
+  kind: ground_truth

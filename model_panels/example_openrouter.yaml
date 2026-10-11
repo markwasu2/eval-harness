@@ -1,0 +1,40 @@
+# Example panel for running against real models through OpenRouter.
+# Requires OPENROUTER_API_KEY in the environment. `provider_model` is the
+# exact OpenRouter route string (see https://openrouter.ai/models for the
+# current catalog of closed and open-weight models).
+models:
+  - id: gpt-4.1
+    provider: openrouter
+    provider_model: openai/gpt-4.1
+    temperature: 0.0
+    seed: 0
+    reasoning: true
+    tool_use: true
+    max_tool_turns: 6
+
+  - id: claude-sonnet-4.5
+    provider: openrouter
+    provider_model: anthropic/claude-sonnet-4.5
+    temperature: 0.0
+    seed: 0
+    reasoning: true
+    tool_use: true
+    max_tool_turns: 6
+
+  - id: gemini-2.5-pro
+    provider: openrouter
+    provider_model: google/gemini-2.5-pro
+    temperature: 0.0
+    seed: 0
+    reasoning: true
+    tool_use: true
+    max_tool_turns: 6
+
+  - id: llama-3.3-70b
+    provider: openrouter
+    provider_model: meta-llama/llama-3.3-70b-instruct
+    temperature: 0.0
+    seed: 0
+    reasoning: true
+    tool_use: true
+    max_tool_turns: 6

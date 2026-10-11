@@ -1,0 +1,28 @@
+id: claims_triage_3class
+track: claims
+family: classification
+title: "Claims severity triage"
+description: >
+  A commercial auto liability claim has just been reported. Based on the
+  intake notes below, classify the expected severity of this claim into
+  exactly one of the three bands in the answer set, and give your
+  calibrated probability for each band.
+input:
+  kind: inline
+  text: |
+    Claim intake notes:
+    - Rear-end collision at an intersection, both vehicles under 25 mph.
+    - No police report filed; no injuries reported at the scene.
+    - Claimant reports mild neck soreness beginning the next day and is
+      seeking a single precautionary evaluation.
+    - Vehicle damage limited to the rear bumper and trunk lid; vehicle
+      remained drivable.
+answer_set: ["low", "medium", "high"]
+ground_truth:
+  label: "low"
+scoring:
+  metric: classification
+baseline:
+  strategy: uniform
+oracle:
+  kind: ground_truth

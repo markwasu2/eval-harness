@@ -1,0 +1,32 @@
+# Offline model panel used by the worked example and by tests. The "mock"
+# provider makes real, deterministic, parseable (or deliberately
+# unparseable, for the flaky/fail variants) calls with no network access,
+# so `eval-harness run` against this panel produces a fully reproducible
+# site with real numbers.
+models:
+  - id: echo-baseline
+    provider: mock
+    provider_model: echo
+    temperature: 0.0
+    seed: 0
+    reasoning: true
+    tool_use: true
+    max_tool_turns: 4
+
+  - id: echo-flaky
+    provider: mock
+    provider_model: echo-flaky
+    temperature: 0.0
+    seed: 1
+    reasoning: true
+    tool_use: true
+    max_tool_turns: 4
+
+  - id: echo-always-fails
+    provider: mock
+    provider_model: echo-fail
+    temperature: 0.0
+    seed: 2
+    reasoning: true
+    tool_use: false
+    max_tool_turns: 4

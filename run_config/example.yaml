@@ -1,0 +1,5 @@
+# Settings for `eval-harness run` / `score` / `build-site` that aren't tied
+# to a specific task or model: bootstrap resampling parameters used when
+# computing confidence intervals for the skill score.
+n_bootstrap_resamples: 2000
+bootstrap_seed: 0
