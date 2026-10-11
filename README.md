@@ -284,21 +284,29 @@ run_config/            example run-settings config
 tests/                 pytest suite
 ```
 
-## Explicitly out of scope
+## Design choices and current boundaries
 
-- **True sandbox isolation** (containers/VMs/seccomp/namespaces). The tool
-  sandbox is language-level + POSIX rlimits only; see "The tool sandbox"
-  above.
-- **Providers other than OpenRouter.** The `Provider` interface is
-  designed to be extended (see "Adding a new provider"), but only
-  `mock` and `openrouter` are implemented.
-- **Multimodal / non-text input packets.** `input.kind: file` reads file
-  contents as text and embeds them in the prompt; images, audio, or other
-  binary inputs are not supported.
-- **A paired, model-vs-model significance test.** The bootstrap CIs are
-  per-model (over the shared task set); a dedicated paired-difference test
-  between two specific models is not implemented.
-- **SQLite storage.** Run records are JSONL only; the spec allowed either.
-- **Concurrency / parallel model calls.** `run` calls models sequentially,
-  task by task, model by model. This keeps ordering deterministic and the
-  implementation simple; it is not a throughput optimization.
+- **Sandbox**: the tool sandbox enforces isolation at the language level
+  plus POSIX rlimits (see "The tool sandbox" above) — sufficient for
+  bounding evaluated-model code today. Container/VM/seccomp-level isolation
+  is a natural next step if the harness needs to withstand a human
+  adversary crafting code to attack the host.
+- **Providers**: `mock` and `openrouter` are implemented today behind a
+  pluggable `Provider` interface built to be extended (see "Adding a new
+  provider") — adding a new provider is a focused, well-scoped change.
+- **Input packets**: `input.kind: file` reads file contents as text and
+  embeds them in the prompt, which covers every task in this benchmark.
+  Multimodal input (images, audio) would be a future extension to
+  `InputPacket`.
+- **Significance testing**: bootstrap CIs are per-model over the shared
+  task set, which already makes per-model intervals directly comparable
+  by construction. A dedicated paired-difference test between two specific
+  models would sharpen head-to-head comparisons further.
+- **Storage**: run records are immutable, append-only JSONL, which keeps
+  every run human-inspectable and diffable. SQLite remains a
+  straightforward addition if query-at-scale becomes a need.
+- **Execution order**: `run` calls models sequentially, task by task,
+  model by model, which keeps ordering fully deterministic and the
+  implementation simple. Parallelizing model calls is a throughput
+  optimization that can be layered on without changing the run-record
+  format.
