@@ -124,7 +124,16 @@ def test_load_tasks_missing_path_fails() -> None:
 def test_example_tasks_load(example_tasks_dir: Path) -> None:
     tasks = load_tasks([example_tasks_dir])
     ids = {t.id for t in tasks}
-    assert ids == {"claims_triage_3class", "reserve_adequacy_band"}
+    assert ids == {
+        "claims_triage_3class",
+        "reserve_adequacy_band",
+        "schedule_p_wc_reserve_band",
+        "schedule_p_other_liability_reserve_band",
+        "schedule_p_comm_auto_development_class",
+    }
     by_id = {t.id: t for t in tasks}
     assert by_id["claims_triage_3class"].family == "classification"
     assert by_id["reserve_adequacy_band"].family == "ordered_band"
+    assert by_id["schedule_p_wc_reserve_band"].family == "ordered_band"
+    assert by_id["schedule_p_other_liability_reserve_band"].family == "ordered_band"
+    assert by_id["schedule_p_comm_auto_development_class"].family == "classification"

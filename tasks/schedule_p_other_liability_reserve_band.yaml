@@ -1,0 +1,33 @@
+id: schedule_p_other_liability_reserve_band
+track: reserving
+family: ordered_band
+title: "Schedule P Part 1F: Other liability (occurrence) reserve adequacy"
+description: >
+  NAIC Schedule P Part 1F (Other Liability - Occurrence) loss development
+  data for accident year 2019 is shown below. Forecast which adequacy band
+  the carried reserve falls into relative to the projected ultimate loss.
+  The answer set is ordered from most-inadequate to most-overstated; give
+  your calibrated probability for each band.
+input:
+  kind: inline
+  text: |
+    Accident year 2019, other liability (occurrence) line, evaluated as of
+    12/31/2024 (60 months of development):
+    - Cumulative paid losses at 60 months: $4,200,000.
+    - Total carried reserve (paid + case) at 60 months: $6,500,000.
+    - Industry-standard age-to-ultimate development factor at 60 months for
+      this line: 1.28 (other liability occurrence is a long-tail line with
+      meaningful but slowing late-stage development beyond 60 months).
+    - Claims department has closed 94% of reported claim counts for this
+      accident year with no new claims reported in the last two
+      evaluations, indicating the claim count is nearly fully developed.
+answer_set: ["severely_under", "under", "adequate", "over", "severely_over"]
+ground_truth:
+  label: "over"
+scoring:
+  metric: ordered_band
+baseline:
+  strategy: majority_class
+  label: "adequate"
+oracle:
+  kind: ground_truth

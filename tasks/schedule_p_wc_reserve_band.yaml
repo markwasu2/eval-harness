@@ -1,0 +1,34 @@
+id: schedule_p_wc_reserve_band
+track: reserving
+family: ordered_band
+title: "Schedule P Part 1B: Workers compensation reserve adequacy"
+description: >
+  NAIC Schedule P Part 1B (Workers' Compensation) loss development data for
+  accident year 2022 is shown below. Forecast which adequacy band the
+  carried reserve falls into relative to the projected ultimate loss. The
+  answer set is ordered from most-inadequate to most-overstated; give your
+  calibrated probability for each band.
+input:
+  kind: inline
+  text: |
+    Accident year 2022, workers' compensation line, evaluated as of
+    12/31/2024 (36 months of development):
+    - Cumulative paid losses at 36 months: $1,850,000.
+    - Case reserves currently carried: $250,000 (total carried reserve,
+      paid + case, = $2,100,000).
+    - Industry-standard WC age-to-ultimate development factor at 36 months:
+      1.35 (medical and indemnity payments on WC claims continue well past
+      36 months; this line is long-tailed).
+    - Claim mix is dominated by lost-time indemnity claims, not
+      medical-only, which historically develop toward the upper end of the
+      industry factor range.
+answer_set: ["severely_under", "under", "adequate", "over", "severely_over"]
+ground_truth:
+  label: "under"
+scoring:
+  metric: ordered_band
+baseline:
+  strategy: majority_class
+  label: "adequate"
+oracle:
+  kind: ground_truth

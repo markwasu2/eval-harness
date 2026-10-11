@@ -1,0 +1,33 @@
+id: schedule_p_comm_auto_development_class
+track: reserving
+family: classification
+title: "Schedule P Part 1D: Commercial auto liability development direction"
+description: >
+  NAIC Schedule P Part 1D (Commercial Auto Liability) loss development data
+  for accident year 2021, from the prior evaluation through the latest
+  evaluation, is shown below. Classify whether this accident year's
+  reserve is likely to show favorable development, adverse development, or
+  no significant development relative to the prior carried estimate, and
+  give your calibrated probability for each.
+input:
+  kind: inline
+  text: |
+    Accident year 2021, commercial auto liability line:
+    - Prior evaluation (12 months ago) carried ultimate loss estimate:
+      $9,000,000.
+    - Current evaluation cumulative paid losses: $7,400,000.
+    - Current case reserves: $900,000 (current carried total: $8,300,000).
+    - Open claim counts have fallen 40% since the prior evaluation with no
+      new large claims reported; average severity on claims closed this
+      period ran below the pattern assumed in the prior ultimate estimate.
+    - Litigation rate on the remaining open claims is below the book
+      average for this line.
+answer_set: ["favorable", "adverse", "none"]
+ground_truth:
+  label: "favorable"
+scoring:
+  metric: classification
+baseline:
+  strategy: uniform
+oracle:
+  kind: ground_truth
