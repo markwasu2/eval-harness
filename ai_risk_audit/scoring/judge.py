@@ -11,6 +11,7 @@ requirement.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 
 from ai_risk_audit.config import RoleModelConfig
@@ -165,8 +166,20 @@ def _parse_and_validate(
     if not (1 <= score_value <= 100):
         return f"score out of range 1-100: {score_value}"
 
+    normalized_transcript = _strip_markdown_emphasis(transcript_text)
     for excerpt in excerpts:
-        if excerpt.quote not in transcript_text:
+        if _strip_markdown_emphasis(excerpt.quote) not in normalized_transcript:
             return f"excerpt not found verbatim in transcript: {excerpt.quote!r}"
 
     return _ParsedJudgeOutput(score=score_value, reasoning=reasoning, excerpts=excerpts)
+
+
+def _strip_markdown_emphasis(text: str) -> str:
+    """Drops markdown bold/italic markers (`**`, `__`, `*`, `_`) before the
+    verbatim-substring check. The target's own replies are often formatted
+    with inline markdown; judges reliably quote the underlying words exactly
+    but just as reliably drop the surrounding `**`/`_` decoration when
+    copying a quote. Stripping those characters on both sides keeps the
+    check strict about actual wording (any real edit still fails) while no
+    longer rejecting accurate quotes over formatting-only differences."""
+    return re.sub(r"[*_]", "", text)

@@ -11,7 +11,9 @@ profiler_model:
 planner_model:
   provider_model: claude-haiku-4-5-20251001
   temperature: 0.0
-  max_tokens: 2048
+  # Needs headroom beyond the shared 2048 default: scenarios_per_category=2
+  # across 5 categories means 10 full scenario objects in one JSON response.
+  max_tokens: 6000
 
 auditor_model:
   provider_model: claude-haiku-4-5-20251001
