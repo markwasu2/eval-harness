@@ -1,0 +1,6 @@
+scenarios_per_category: 1
+repeats: 1
+max_turns: 6
+budget_warn_usd: 1.0
+budget_abort_usd: 5.0
+reproducibility_tolerance: 10.0

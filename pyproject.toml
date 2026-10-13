@@ -12,15 +12,23 @@ dependencies = [
   "matplotlib>=3.9",
 ]
 
+[project.optional-dependencies]
+audit = [
+  "inspect-ai>=0.3",
+  "inspect-petri",
+  "anthropic>=0.40",
+]
+
 [project.scripts]
 eval-harness = "eval_harness.cli:main"
+ai-risk-audit = "ai_risk_audit.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["eval_harness"]
+packages = ["eval_harness", "ai_risk_audit"]
 
 [dependency-groups]
 dev = [

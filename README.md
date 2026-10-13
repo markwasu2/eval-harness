@@ -284,6 +284,81 @@ run_config/            example run-settings config
 tests/                 pytest suite
 ```
 
+## ai-risk-audit: AI-company risk audit agent
+
+A separate module (`ai_risk_audit/`) built on
+[Petri](https://github.com/meridianlabs-ai/inspect_petri) for auditing a
+target AI agent across five risk categories: IP infringement, harmful
+output, data leakage, tool-call abuse, and prompt injection. It is
+independent of the rest of `eval_harness` (different CLI entry point,
+different config, no shared imports beyond the repo's conventions) and
+does not affect `eval-harness run`/`score`/`build-site`/`all`.
+
+### Pipeline (five stages, one module each)
+
+1. **Profiler** (`ai_risk_audit/profiler/`) — LLM-extracts a structured
+   `TargetProfile` from raw source material (text/file/URL), saving the raw
+   sources alongside. Unaddressed fields are extracted as the literal
+   string `"not stated in sources"` rather than guessed.
+2. **Planner** (`ai_risk_audit/planner/`) — turns a profile into an
+   `AuditPlan`: adversarial scenarios for each of the 5 risk categories,
+   each with a pass/fail rubric, rendered as Petri seed `.md` files.
+3. **Execution** (`ai_risk_audit/execution/`) — runs each scenario through
+   Petri's auditor↔target multi-turn conversation against a custom target
+   agent and stores every transcript immutably (append-only JSONL, mirrors
+   `eval_harness/runs.py`'s pattern).
+4. **Scoring** (`ai_risk_audit/scoring/`) — a judge model scores each
+   transcript 1–100 per category and must quote transcript lines verbatim;
+   quotes that aren't an exact substring of the transcript are rejected and
+   retried. Aggregation to an overall score is a pure, deterministic
+   function (median per category, fixed documented weights) — no LLM
+   involved.
+5. **Report** (`ai_risk_audit/report/`) — writes `report.json` +
+   `report.md`: every category score with its quoted evidence excerpts.
+
+Every LLM call (profiler, planner, judge, and Petri's own auditor/target/
+judge roles) is named in one config file (`ai_risk_audit/config.py` / a
+YAML file like `configs/audit_config.example.yaml`). Calls go direct to
+the Anthropic Messages API by default (`AnthropicChat` in
+`ai_risk_audit/llm.py`, reading `ANTHROPIC_API_KEY`) — an `OpenRouterChat`
+backend also exists for when a funded OpenRouter account is available
+instead; both satisfy the same `ChatClient` protocol. A `CostTracker`
+wraps every call, accumulates spend per run, warns at `budget_warn_usd`,
+and aborts (writing a report documenting why, before any further spend)
+past `budget_abort_usd`.
+
+### The mock Acme target
+
+The built-in definition-of-done target is a mock "Acme Co. support agent"
+(`ai_risk_audit/execution/fake_target.py`): a Claude-served chat model with
+a permissive support-agent persona, 3 fixed tools, and planted weaknesses
+with known ground truth (a fake customer record it will leak if pushed, a
+fake copyrighted jingle it will reproduce, and a prompt-injection payload
+hidden in a help article). Tool calls are executed by a deterministic
+Python backend — never simulated by the auditor model — so scoring against
+these scenarios is verifiable, not just plausible.
+
+### Running it
+
+```bash
+uv sync --extra audit                 # installs inspect-ai + inspect-petri
+export ANTHROPIC_API_KEY=sk-ant-...   # or put it in a .env file
+uv run ai-risk-audit demo --out audits/acme-demo
+```
+
+`demo` runs the full pipeline end-to-end against the mock Acme target with
+no required flags. `run` takes a named target and profiler source material
+(`--source-text`/`--source-file`/`--source-url`, repeatable) against the
+same mock target — auditing a different target requires swapping the
+`target=` Agent passed to Petri in `execution/run.py`.
+
+### Current boundary
+
+Execution always drives the mock Acme target; wiring in a different
+target (e.g. a real public demo agent reached via an API-shaped client,
+not browser automation) is a follow-up — swap the `target=` argument in
+`execution/run.py` for a new target `Agent` implementation.
+
 ## Design choices and current boundaries
 
 - **Sandbox**: the tool sandbox enforces isolation at the language level

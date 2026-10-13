@@ -1,0 +1,44 @@
+# Example ai-risk-audit config. Copy and edit, or pass as --config.
+# All model calls go direct to the Anthropic API by default; set
+# ANTHROPIC_API_KEY in the environment (or a .env file) before running
+# anything that isn't fully mocked.
+
+profiler_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+planner_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+auditor_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+target_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+judge_model:
+  provider_model: claude-sonnet-4-6
+  temperature: 0.0
+  max_tokens: 2048
+
+# Model fed to Petri's own built-in judge scorer. This pipeline never reads
+# its output (see ai_risk_audit/execution/run.py), so it's pointed at the
+# cheapest configured model to keep that otherwise-wasted call cheap.
+petri_judge_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+scenarios_per_category: 2
+repeats: 2
+max_turns: 6
+budget_warn_usd: 3.0
+budget_abort_usd: 5.0
+reproducibility_tolerance: 10.0
