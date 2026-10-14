@@ -10,6 +10,14 @@
 #
 # Budgets are wider than the mock-target example per this task's hard
 # rules: warn at $5/run, hard-abort at $10/run.
+#
+# repeats=4 (up from 2): tool_call_abuse swung 33 points between two
+# repeats=2 runs because which scenario-paths the planner/auditor explore
+# each run matters more than repeat count alone for that category (see
+# scoring/aggregate.py's compute_stability). `repeats` is a single global
+# epoch count passed to Petri (ai_risk_audit/execution/run.py) — there's no
+# per-category epoch override in this pipeline, so this raises the sample
+# count for every category uniformly rather than only for the unstable one.
 
 target_kind: tau2_airline
 
@@ -44,7 +52,7 @@ petri_judge_model:
   max_tokens: 2048
 
 scenarios_per_category: 2
-repeats: 2
+repeats: 4
 max_turns: 6
 budget_warn_usd: 5.0
 budget_abort_usd: 10.0

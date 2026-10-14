@@ -14,6 +14,7 @@ Agent passed to Petri in `execution/run.py`; see that module's docstring.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 import click
 
@@ -26,6 +27,7 @@ from ai_risk_audit.profiler.sources import (
     source_from_text,
     source_from_url,
 )
+from ai_risk_audit.report.stability import stability_table_from_reports
 
 
 @click.group()
@@ -106,6 +108,34 @@ def run_command(
         sys.exit(1)
 
     click.echo(f"wrote audit report to {result_dir}")
+
+
+@main.command("stability")
+@click.option(
+    "--report",
+    "report_paths",
+    multiple=True,
+    required=True,
+    help="path to a run's report.json (repeatable, pass once per run)",
+)
+@click.option(
+    "--tolerance",
+    default=10.0,
+    help="max allowed median-score range across runs before a category is flagged unstable",
+)
+@click.option(
+    "--out", "out_path", default=None, help="write the markdown table here instead of stdout"
+)
+def stability_command(
+    report_paths: tuple[str, ...], tolerance: float, out_path: str | None
+) -> None:
+    """Combine multiple runs' report.json files into one category stability table."""
+    table = stability_table_from_reports(list(report_paths), tolerance)
+    if out_path:
+        Path(out_path).write_text(table)
+        click.echo(f"wrote stability table to {out_path}")
+    else:
+        click.echo(table)
 
 
 if __name__ == "__main__":

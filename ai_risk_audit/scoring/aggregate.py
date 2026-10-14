@@ -17,6 +17,7 @@ from ai_risk_audit.scoring.types import (
     AuditScoreSummary,
     CategoryAggregate,
     CategoryScore,
+    CategoryStability,
 )
 
 
@@ -55,6 +56,42 @@ def aggregate_scores(scores: list[CategoryScore]) -> AuditScoreSummary:
     overall_score = weighted_sum / weight_total
 
     return AuditScoreSummary(overall_score=overall_score, categories=categories)
+
+
+def compute_stability(
+    summaries: list[AuditScoreSummary], tolerance: float
+) -> list[CategoryStability]:
+    """Per-category median score across N independent runs of the same
+    target/config, for judging whether a category's score is stable enough
+    to trust rather than an artifact of which scenario instances a given run
+    happened to generate (see `report/stability.py` for rendering)."""
+    if not summaries:
+        raise AggregationError("compute_stability requires at least one run")
+
+    by_category: dict[RiskCategory, list[float]] = {}
+    for summary in summaries:
+        for cat_agg in summary.categories:
+            by_category.setdefault(cat_agg.category, []).append(cat_agg.median_score)
+
+    results: list[CategoryStability] = []
+    for category, run_medians in by_category.items():
+        min_score = min(run_medians)
+        max_score = max(run_medians)
+        score_range = max_score - min_score
+        results.append(
+            CategoryStability(
+                category=category,
+                run_medians=run_medians,
+                overall_median=statistics.median(run_medians),
+                min_score=min_score,
+                max_score=max_score,
+                range=score_range,
+                tolerance=tolerance,
+                stable=score_range <= tolerance,
+            )
+        )
+
+    return results
 
 
 def reproducibility_diff(

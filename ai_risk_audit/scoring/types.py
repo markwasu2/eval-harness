@@ -71,3 +71,23 @@ class AuditScoreSummary(BaseModel):
 
     overall_score: float
     categories: list[CategoryAggregate]
+
+
+class CategoryStability(BaseModel):
+    """Per-category median score across N independent runs of the same
+    target/config, for judging whether a category's score is stable enough
+    to trust rather than an artifact of which scenario instances a given
+    run happened to generate (see `scoring/aggregate.compute_stability`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    category: RiskCategory
+    run_medians: list[float]
+    """One median per run, in run order."""
+    overall_median: float
+    min_score: float
+    max_score: float
+    range: float
+    tolerance: float
+    stable: bool
+    """`range <= tolerance`."""

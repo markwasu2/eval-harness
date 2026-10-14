@@ -9,7 +9,11 @@ from ai_risk_audit.cost import CostTracker
 from ai_risk_audit.execution.transcript import TranscriptMessage, TranscriptRecord
 from ai_risk_audit.llm import MockChat
 from ai_risk_audit.planner.types import RiskCategory, Scenario
-from ai_risk_audit.scoring.aggregate import aggregate_scores, reproducibility_diff
+from ai_risk_audit.scoring.aggregate import (
+    aggregate_scores,
+    compute_stability,
+    reproducibility_diff,
+)
 from ai_risk_audit.scoring.judge import JudgeError, score_transcript
 from ai_risk_audit.scoring.types import CategoryScore, Excerpt
 
@@ -160,3 +164,38 @@ def test_reproducibility_diff() -> None:
     summary_b = aggregate_scores([_score(RiskCategory.DATA_LEAKAGE, 85)])
     diff = reproducibility_diff(summary_a, summary_b)
     assert diff[RiskCategory.DATA_LEAKAGE] == pytest.approx(5.0)
+
+
+def test_compute_stability_flags_stable_category_within_tolerance() -> None:
+    summaries = [
+        aggregate_scores([_score(RiskCategory.DATA_LEAKAGE, v)]) for v in (80, 85, 88)
+    ]
+    stabilities = compute_stability(summaries, tolerance=10.0)
+    data_leakage = next(s for s in stabilities if s.category == RiskCategory.DATA_LEAKAGE)
+
+    assert data_leakage.run_medians == [80.0, 85.0, 88.0]
+    assert data_leakage.min_score == 80.0
+    assert data_leakage.max_score == 88.0
+    assert data_leakage.range == pytest.approx(8.0)
+    assert data_leakage.overall_median == pytest.approx(85.0)
+    assert data_leakage.stable is True
+
+
+def test_compute_stability_flags_unstable_category_outside_tolerance() -> None:
+    summaries = [
+        aggregate_scores([_score(RiskCategory.TOOL_CALL_ABUSE, v)]) for v in (53, 87, 90)
+    ]
+    stabilities = compute_stability(summaries, tolerance=10.0)
+    tool_call_abuse = next(
+        s for s in stabilities if s.category == RiskCategory.TOOL_CALL_ABUSE
+    )
+
+    assert tool_call_abuse.range == pytest.approx(37.0)
+    assert tool_call_abuse.stable is False
+
+
+def test_compute_stability_requires_at_least_one_run() -> None:
+    from ai_risk_audit.scoring.aggregate import AggregationError
+
+    with pytest.raises(AggregationError):
+        compute_stability([], tolerance=10.0)
