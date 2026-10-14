@@ -9,6 +9,17 @@ scorer is always attached internally (unavoidable — see `audit()`'s
 docstring) but pointed at the cheapest configured model and given
 `judge_dimensions=[]` to minimize its cost; this pipeline's own scoring
 module (stage 4) never reads its output.
+
+Per-category epoch counts: Petri's `eval_async(..., epochs=N)` applies one
+epoch count to every sample in that call's dataset — there is no per-sample
+epoch control within a single call. `run_plan` works around this by
+grouping `plan.scenarios` by their own `Scenario.repeats` value (set per
+category from `AuditConfig.repeats_overrides` in `planner/plan.build_plan`)
+and issuing one independent `eval_async` call per distinct group, each
+pointed at its own seeds subdirectory and its own `epochs=`. All groups'
+samples are written into the same transcript batch file, so downstream
+scoring/aggregation sees one run regardless of how many eval_async calls
+produced it.
 """
 
 from __future__ import annotations
@@ -48,8 +59,13 @@ class ExecutionError(Exception):
 
 def estimate_projected_usd(plan: AuditPlan, config: AuditConfig) -> float:
     """Conservative over-estimate of stage-3 spend, printed before any real
-    call is made so the user can check the projection against the budget."""
-    n_runs = len(plan.scenarios) * config.repeats
+    call is made so the user can check the projection against the budget.
+
+    Sums each scenario's own `repeats` (set per category from
+    `config.repeats_overrides` at plan-build time) rather than assuming a
+    single global `config.repeats` for every scenario, so a category-level
+    override is reflected in the pre-flight projection too."""
+    n_runs = sum(s.repeats for s in plan.scenarios)
     tokens_per_run = config.max_turns * 2 * _ASSUMED_TOKENS_PER_TURN
     return n_runs * tokens_per_run / 1000 * _ASSUMED_USD_PER_1K_TOKENS
 
@@ -75,8 +91,6 @@ async def run_plan(
     adapter's equivalents when `config.target_kind == "tau2_airline"`.
     """
     out_dir = Path(out_dir)
-    seeds_dir = out_dir / "seeds"
-    render_seed_files(plan, seeds_dir)
 
     model_roles = {
         "auditor": _role_model(config.auditor_model.provider_model),
@@ -84,45 +98,65 @@ async def run_plan(
         "judge": _role_model(config.petri_judge_model.provider_model),
     }
 
-    logs = await eval_async(
-        audit(
-            seed_instructions=str(seeds_dir),
-            max_turns=config.max_turns,
-            target_tools="none",
-            judge_dimensions=[],
-            target=target_agent,
-            target_display_name=target_display_name,
-        ),
-        model_roles=model_roles,
-        epochs=config.repeats,
-        log_dir=str(out_dir / "inspect_logs"),
-    )
-
     batch_id = transcript_store.new_batch_id()
     batch_file = transcript_store.batch_path(out_dir / "transcripts", batch_id)
-
     scenario_by_id = {s.id: s for s in plan.scenarios}
-    for log in logs:
-        for sample in log.samples or []:
-            record = _to_transcript_record(
-                sample, batch_id, scenario_by_id, model_roles, config, target_messages_store_key
-            )
-            transcript_store.write_record(batch_file, record)
-            # For targets whose own LLM calls bypass Inspect's role-based
-            # usage tracking (e.g. the tau2-bench airline agent — see
-            # `tau_target_agent.py`'s module docstring part 3), `target_agent`
-            # itself records that spend into `cost_tracker` directly as it
-            # happens; `record.usd_cost` here only ever reflects role_usage
-            # Inspect actually observed (auditor + petri's judge, and the
-            # target too for role-based targets like the mock Acme one), so
-            # this call never double-counts across the two paths.
-            cost_tracker.record(
-                stage="execution",
-                model=model_roles["target"],
-                usd=record.usd_cost,
-                prompt_tokens=record.prompt_tokens,
-                completion_tokens=record.completion_tokens,
-            )
+
+    # Group by each scenario's own `repeats` (see module docstring): one
+    # `eval_async` call per distinct epoch count, not per scenario, so
+    # categories sharing the same count (the common case) still run in a
+    # single call.
+    repeats_groups: dict[int, list[Scenario]] = {}
+    for scenario in plan.scenarios:
+        repeats_groups.setdefault(scenario.repeats, []).append(scenario)
+
+    for repeats, group_scenarios in sorted(repeats_groups.items()):
+        group_seeds_dir = out_dir / "seeds" / f"repeats_{repeats}"
+        render_seed_files(
+            AuditPlan(target_name=plan.target_name, scenarios=group_scenarios),
+            group_seeds_dir,
+        )
+
+        logs = await eval_async(
+            audit(
+                seed_instructions=str(group_seeds_dir),
+                max_turns=config.max_turns,
+                target_tools="none",
+                judge_dimensions=[],
+                target=target_agent,
+                target_display_name=target_display_name,
+            ),
+            model_roles=model_roles,
+            epochs=repeats,
+            log_dir=str(out_dir / "inspect_logs" / f"repeats_{repeats}"),
+        )
+
+        for log in logs:
+            for sample in log.samples or []:
+                record = _to_transcript_record(
+                    sample,
+                    batch_id,
+                    scenario_by_id,
+                    model_roles,
+                    config,
+                    target_messages_store_key,
+                )
+                transcript_store.write_record(batch_file, record)
+                # For targets whose own LLM calls bypass Inspect's role-based
+                # usage tracking (e.g. the tau2-bench airline agent — see
+                # `tau_target_agent.py`'s module docstring part 3), `target_agent`
+                # itself records that spend into `cost_tracker` directly as it
+                # happens; `record.usd_cost` here only ever reflects role_usage
+                # Inspect actually observed (auditor + petri's judge, and the
+                # target too for role-based targets like the mock Acme one), so
+                # this call never double-counts across the two paths.
+                cost_tracker.record(
+                    stage="execution",
+                    model=model_roles["target"],
+                    usd=record.usd_cost,
+                    prompt_tokens=record.prompt_tokens,
+                    completion_tokens=record.completion_tokens,
+                )
 
     return batch_file
 

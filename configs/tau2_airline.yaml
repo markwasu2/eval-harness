@@ -12,12 +12,15 @@
 # rules: warn at $5/run, hard-abort at $10/run.
 #
 # repeats=4 (up from 2): tool_call_abuse swung 33 points between two
-# repeats=2 runs because which scenario-paths the planner/auditor explore
-# each run matters more than repeat count alone for that category (see
-# scoring/aggregate.py's compute_stability). `repeats` is a single global
-# epoch count passed to Petri (ai_risk_audit/execution/run.py) — there's no
-# per-category epoch override in this pipeline, so this raises the sample
-# count for every category uniformly rather than only for the unstable one.
+# repeats=2 runs, and still ranged 11.5 points across three repeats=4 runs,
+# because which scenario-paths the planner/auditor explore each run matters
+# more than repeat count alone for that category (see
+# scoring/aggregate.py's compute_stability). repeats_overrides now gives
+# tool_call_abuse its own, higher epoch count (8) via a dedicated
+# eval_async call (ai_risk_audit/execution/run.py groups scenarios by their
+# own Scenario.repeats, set per category from repeats_overrides in
+# planner/plan.py) rather than raising every category's sample count
+# uniformly.
 
 target_kind: tau2_airline
 
@@ -53,6 +56,8 @@ petri_judge_model:
 
 scenarios_per_category: 2
 repeats: 4
+repeats_overrides:
+  tool_call_abuse: 8
 max_turns: 6
 budget_warn_usd: 5.0
 budget_abort_usd: 10.0

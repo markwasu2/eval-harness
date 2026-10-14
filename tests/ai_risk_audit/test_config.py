@@ -13,6 +13,7 @@ from ai_risk_audit.config import (
     AuditConfigError,
     load_config,
 )
+from ai_risk_audit.planner.types import RiskCategory
 
 
 def test_defaults() -> None:
@@ -24,6 +25,7 @@ def test_defaults() -> None:
     assert config.judge_model.provider_model == DEFAULT_JUDGE_MODEL
     assert config.scenarios_per_category == 2
     assert config.repeats == 2
+    assert config.repeats_overrides == {}
     assert config.max_turns == 6
     assert config.budget_warn_usd == 3.0
     assert config.budget_abort_usd == 5.0
@@ -42,6 +44,16 @@ def test_load_from_yaml(tmp_path: Path) -> None:
     assert config.repeats == 3
     # untouched fields keep their defaults
     assert config.profiler_model.provider_model == DEFAULT_CHEAP_MODEL
+
+
+def test_load_repeats_overrides_from_yaml(tmp_path: Path) -> None:
+    data = {"repeats": 4, "repeats_overrides": {"tool_call_abuse": 8}}
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump(data))
+
+    config = load_config(path)
+    assert config.repeats == 4
+    assert config.repeats_overrides == {RiskCategory.TOOL_CALL_ABUSE: 8}
 
 
 def test_missing_file_rejected(tmp_path: Path) -> None:

@@ -18,6 +18,8 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from ai_risk_audit.planner.types import RiskCategory
+
 DEFAULT_CHEAP_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_JUDGE_MODEL = "claude-sonnet-4-6"
 
@@ -66,6 +68,14 @@ class AuditConfig(BaseModel):
 
     scenarios_per_category: int = 2
     repeats: int = 2
+    repeats_overrides: dict[RiskCategory, int] = Field(default_factory=dict)
+    """Per-category epoch-count overrides, e.g. {tool_call_abuse: 8}. Any
+    category not listed here falls back to `repeats`. `planner/plan.py`'s
+    `build_plan` sets each `Scenario.repeats` from this at plan-build time,
+    and `execution/run.py`'s `run_plan` groups scenarios by that per-scenario
+    `repeats` value into one independent `eval_async` call per distinct
+    group — so a category with a higher override actually gets more epochs,
+    not just a bigger shared pool (see that module's docstring)."""
     max_turns: int = 6
     budget_warn_usd: float = 3.0
     budget_abort_usd: float = 5.0

@@ -31,23 +31,25 @@ def test_tau_target_agent_module_imports_against_real_tau2_and_petri_api() -> No
 def test_estimate_projected_usd_is_pure_and_positive() -> None:
     from ai_risk_audit.execution.run import estimate_projected_usd
 
-    plan = AuditPlan(
-        target_name="Acme Co",
-        scenarios=[
-            Scenario(
-                id="data_leakage-1",
-                category=RiskCategory.DATA_LEAKAGE,
-                title="t",
-                seed_instructions="i",
-                pass_criteria="p",
-                fail_criteria="f",
-            )
-        ],
-    )
+    def _plan(repeats: int) -> AuditPlan:
+        return AuditPlan(
+            target_name="Acme Co",
+            scenarios=[
+                Scenario(
+                    id="data_leakage-1",
+                    category=RiskCategory.DATA_LEAKAGE,
+                    title="t",
+                    seed_instructions="i",
+                    pass_criteria="p",
+                    fail_criteria="f",
+                    repeats=repeats,
+                )
+            ],
+        )
+
     config = AuditConfig()
-    projected = estimate_projected_usd(plan, config)
+    projected = estimate_projected_usd(_plan(2), config)
     assert projected > 0
-    # scales linearly with repeats
-    doubled_config = config.model_copy(update={"repeats": config.repeats * 2})
-    doubled = estimate_projected_usd(plan, doubled_config)
+    # scales linearly with each scenario's own repeats count
+    doubled = estimate_projected_usd(_plan(4), config)
     assert doubled == projected * 2

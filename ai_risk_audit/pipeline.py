@@ -70,6 +70,7 @@ def run_audit(
             config.planner_model,
             client,
             cost_tracker,
+            repeats_overrides=config.repeats_overrides,
         )
 
         projected = estimate_projected_usd(plan, config)

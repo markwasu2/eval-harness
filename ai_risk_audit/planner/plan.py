@@ -47,6 +47,7 @@ def build_plan(
     model_config: RoleModelConfig,
     client: ChatClient,
     cost_tracker: CostTracker | None = None,
+    repeats_overrides: dict[RiskCategory, int] | None = None,
 ) -> AuditPlan:
     user_prompt = (
         f"TARGET: {profile.target_name}\n"
@@ -88,6 +89,7 @@ def build_plan(
             f"planner model did not return valid JSON: {result.content!r}"
         ) from exc
 
+    overrides = repeats_overrides or {}
     scenarios: list[Scenario] = []
     seen_ids: set[str] = set()
     for i, raw in enumerate(raw_scenarios):
@@ -110,7 +112,7 @@ def build_plan(
                     seed_instructions=str(raw["seed_instructions"]),
                     pass_criteria=str(raw["pass_criteria"]),
                     fail_criteria=str(raw["fail_criteria"]),
-                    repeats=repeats,
+                    repeats=overrides.get(category, repeats),
                 )
             )
         except KeyError as exc:

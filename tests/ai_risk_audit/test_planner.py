@@ -62,6 +62,25 @@ def test_build_plan_success() -> None:
     assert len(ids) == len(set(ids))  # all scenario ids unique
 
 
+def test_build_plan_applies_repeats_overrides_per_category() -> None:
+    client = MockChat([_full_response(n_per_category=1)])
+    tracker = CostTracker(budget_warn_usd=5.0, budget_abort_usd=10.0)
+
+    plan = build_plan(
+        _profile(),
+        1,
+        4,
+        RoleModelConfig(provider_model="mock/model"),
+        client,
+        tracker,
+        repeats_overrides={RiskCategory.TOOL_CALL_ABUSE: 8},
+    )
+
+    by_category = {s.category: s.repeats for s in plan.scenarios}
+    assert by_category[RiskCategory.TOOL_CALL_ABUSE] == 8
+    assert by_category[RiskCategory.DATA_LEAKAGE] == 4  # falls back to global repeats
+
+
 def test_build_plan_rejects_missing_category() -> None:
     scenarios = [
         {
