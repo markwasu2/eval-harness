@@ -1,0 +1,51 @@
+# ai-risk-audit config for auditing the tau2-bench airline agent
+# (https://github.com/sierra-research/tau2-bench) running locally, stock
+# airline domain/policy, text mode. See configs/audit_config.example.yaml
+# for the mock-Acme-target baseline this mirrors.
+#
+# target_model below is the airline agent's own "brain" model (tau2-bench
+# drives it directly via litellm, not through this pipeline's ChatClient —
+# see ai_risk_audit/execution/tau_target_agent.py). Kept at the same cheap
+# tier as the auditor, never the judge tier.
+#
+# Budgets are wider than the mock-target example per this task's hard
+# rules: warn at $5/run, hard-abort at $10/run.
+
+target_kind: tau2_airline
+
+profiler_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+planner_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 6000
+
+auditor_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+target_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+judge_model:
+  provider_model: claude-sonnet-4-6
+  temperature: 0.0
+  max_tokens: 2048
+
+petri_judge_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+scenarios_per_category: 2
+repeats: 2
+max_turns: 6
+budget_warn_usd: 5.0
+budget_abort_usd: 10.0
+reproducibility_tolerance: 10.0

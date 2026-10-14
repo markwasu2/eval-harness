@@ -1,16 +1,20 @@
 """Runs an `AuditPlan` against the target via Petri.
 
 Each scenario in the plan becomes one Petri seed; `eval_async(audit(...))`
-drives the full auditor<->target multi-turn conversation using the custom
-`acme_target_agent`. Petri's own built-in judge scorer is always attached
-internally (unavoidable — see `audit()`'s docstring) but pointed at the
-cheapest configured model and given `judge_dimensions=[]` to minimize its
-cost; this pipeline's own scoring module (stage 4) never reads its output.
+drives the full auditor<->target multi-turn conversation using a pluggable
+`target_agent` (the mock `acme_target_agent` by default; `pipeline.py` swaps
+in `tau_target_agent.make_tau_airline_target_agent(...)` for the tau2-bench
+airline target via `AuditConfig.target_kind`). Petri's own built-in judge
+scorer is always attached internally (unavoidable — see `audit()`'s
+docstring) but pointed at the cheapest configured model and given
+`judge_dimensions=[]` to minimize its cost; this pipeline's own scoring
+module (stage 4) never reads its output.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from inspect_ai import eval_async
 from inspect_ai.log import EvalSample
@@ -59,9 +63,17 @@ async def run_plan(
     config: AuditConfig,
     out_dir: str | Path,
     cost_tracker: CostTracker,
+    target_agent: Any = acme_target_agent,
+    target_display_name: str = "Acme Assist",
+    target_messages_store_key: str = TARGET_MESSAGES_STORE_KEY,
 ) -> Path:
-    """Runs every scenario in `plan` against the mock Acme target and writes
-    one immutable transcript batch. Returns the path to the batch file."""
+    """Runs every scenario in `plan` against `target_agent` and writes one
+    immutable transcript batch. Returns the path to the batch file.
+
+    `target_agent`/`target_display_name`/`target_messages_store_key` default
+    to the mock Acme target; `pipeline.py` passes the tau2-bench airline
+    adapter's equivalents when `config.target_kind == "tau2_airline"`.
+    """
     out_dir = Path(out_dir)
     seeds_dir = out_dir / "seeds"
     render_seed_files(plan, seeds_dir)
@@ -78,8 +90,8 @@ async def run_plan(
             max_turns=config.max_turns,
             target_tools="none",
             judge_dimensions=[],
-            target=acme_target_agent,
-            target_display_name="Acme Assist",
+            target=target_agent,
+            target_display_name=target_display_name,
         ),
         model_roles=model_roles,
         epochs=config.repeats,
@@ -93,9 +105,17 @@ async def run_plan(
     for log in logs:
         for sample in log.samples or []:
             record = _to_transcript_record(
-                sample, batch_id, scenario_by_id, model_roles, config
+                sample, batch_id, scenario_by_id, model_roles, config, target_messages_store_key
             )
             transcript_store.write_record(batch_file, record)
+            # For targets whose own LLM calls bypass Inspect's role-based
+            # usage tracking (e.g. the tau2-bench airline agent — see
+            # `tau_target_agent.py`'s module docstring part 3), `target_agent`
+            # itself records that spend into `cost_tracker` directly as it
+            # happens; `record.usd_cost` here only ever reflects role_usage
+            # Inspect actually observed (auditor + petri's judge, and the
+            # target too for role-based targets like the mock Acme one), so
+            # this call never double-counts across the two paths.
             cost_tracker.record(
                 stage="execution",
                 model=model_roles["target"],
@@ -113,6 +133,7 @@ def _to_transcript_record(
     scenario_by_id: dict[str, Scenario],
     model_roles: dict[str, str],
     config: AuditConfig,
+    target_messages_store_key: str = TARGET_MESSAGES_STORE_KEY,
 ) -> transcript_store.TranscriptRecord:
     scenario_id = str(sample.id)
     scenario = scenario_by_id.get(scenario_id)
@@ -148,13 +169,14 @@ def _to_transcript_record(
     # `sample.messages` is the AUDITOR's own message history (the audit
     # sample's top-level agent is the auditor, not our target) — it is not
     # this target's conversation. The target's own turns are recovered from
-    # the sample store, which `acme_target_agent` mirrors them into on every
-    # turn (see that module's docstring).
-    raw_messages = sample.store.get(TARGET_MESSAGES_STORE_KEY)
+    # the sample store, which `target_agent` mirrors them into on every
+    # turn (see `execution/target_agent.py` / `execution/tau_target_agent.py`
+    # module docstrings).
+    raw_messages = sample.store.get(target_messages_store_key)
     if not raw_messages:
         raise ExecutionError(
             f"sample {scenario_id!r} has no target-conversation messages in "
-            f"its store under {TARGET_MESSAGES_STORE_KEY!r} — the target "
+            f"its store under {target_messages_store_key!r} — the target "
             f"agent may have failed before its first turn"
         )
     messages = [transcript_store.TranscriptMessage(**m) for m in raw_messages]

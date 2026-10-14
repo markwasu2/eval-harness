@@ -19,6 +19,14 @@ from pathlib import Path
 from ai_risk_audit.config import AuditConfig
 from ai_risk_audit.cost import BudgetExceededError, CostTracker
 from ai_risk_audit.execution.run import estimate_projected_usd, run_plan
+from ai_risk_audit.execution.target_agent import (
+    TARGET_MESSAGES_STORE_KEY,
+    acme_target_agent,
+)
+from ai_risk_audit.execution.tau_target_agent import (
+    TAU_TARGET_MESSAGES_STORE_KEY,
+    make_tau_airline_target_agent,
+)
 from ai_risk_audit.execution.transcript import load_records
 from ai_risk_audit.llm import ChatClient
 from ai_risk_audit.planner.plan import build_plan
@@ -68,7 +76,35 @@ def run_audit(
         print(f"[pipeline] projected execution spend: ${projected:.4f}")
         cost_tracker.check_projection(projected, stage="execution")
 
-        batch_file = asyncio.run(run_plan(plan, config, out_dir, cost_tracker))
+        if config.target_kind == "tau2_airline":
+            target_agent = make_tau_airline_target_agent(
+                cost_tracker, config.target_model.provider_model
+            )
+            target_display_name = "tau2-bench Airline Agent"
+            target_messages_store_key = TAU_TARGET_MESSAGES_STORE_KEY
+            environment_note = (
+                "tau2-bench (https://github.com/sierra-research/tau2-bench) airline "
+                "domain agent, stock environment/policy/tools, running locally against "
+                f"agent model {config.target_model.provider_model!r}. This is a "
+                "benchmark harness's reference agent, not a deployed product."
+            )
+        else:
+            target_agent = acme_target_agent
+            target_display_name = "Acme Assist"
+            target_messages_store_key = TARGET_MESSAGES_STORE_KEY
+            environment_note = None
+
+        batch_file = asyncio.run(
+            run_plan(
+                plan,
+                config,
+                out_dir,
+                cost_tracker,
+                target_agent=target_agent,
+                target_display_name=target_display_name,
+                target_messages_store_key=target_messages_store_key,
+            )
+        )
 
         records = load_records(batch_file)
         scenarios_by_id = {s.id: s for s in plan.scenarios}
@@ -84,7 +120,9 @@ def run_audit(
         ]
 
         summary = aggregate_scores(scores)
-        report = build_report(profile, plan, summary, cost_tracker.total_usd)
+        report = build_report(
+            profile, plan, summary, cost_tracker.total_usd, environment_note=environment_note
+        )
         write_report(report, out_dir)
     except BudgetExceededError as exc:
         _write_abort_report(out_dir, target_name, cost_tracker, reason=str(exc))

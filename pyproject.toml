@@ -18,6 +18,10 @@ audit = [
   "inspect-petri",
   "anthropic>=0.40",
 ]
+tau2 = [
+    "tau2",
+    "websockets>=17.2",
+]
 
 [project.scripts]
 eval-harness = "eval_harness.cli:main"
@@ -45,3 +49,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.uv.sources]
+tau2 = { path = "../tau2-bench", editable = true }

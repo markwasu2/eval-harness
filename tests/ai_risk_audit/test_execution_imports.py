@@ -21,6 +21,13 @@ def test_run_module_imports_against_real_inspect_api() -> None:
     assert callable(run.run_plan)
 
 
+def test_tau_target_agent_module_imports_against_real_tau2_and_petri_api() -> None:
+    from ai_risk_audit.execution import tau_target_agent
+
+    assert callable(tau_target_agent.make_tau_airline_target_agent)
+    assert callable(tau_target_agent.run_agent_turn)
+
+
 def test_estimate_projected_usd_is_pure_and_positive() -> None:
     from ai_risk_audit.execution.run import estimate_projected_usd
 

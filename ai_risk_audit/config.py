@@ -13,6 +13,7 @@ score quality there is the thing the pipeline most needs to be trusted.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -56,6 +57,12 @@ class AuditConfig(BaseModel):
     task always attaches that scorer internally and this pipeline never reads
     its output (see `execution/run.py`); pointing it at the cheapest
     configured model keeps that otherwise-wasted call cheap."""
+
+    target_kind: Literal["acme", "tau2_airline"] = "acme"
+    """Which target `pipeline.run_audit` drives: the built-in mock Acme Co.
+    support agent, or the tau2-bench airline agent (stock domain/policy,
+    simulated user replaced by the auditor — see `execution/tau_target_agent.py`).
+    `target_model` is the model used for that target's own "brain" either way."""
 
     scenarios_per_category: int = 2
     repeats: int = 2

@@ -24,6 +24,10 @@ class AuditReport(BaseModel):
     plan: AuditPlan
     score_summary: AuditScoreSummary
     total_usd_spent: float
+    environment_note: str | None = None
+    """Free-text disclosure of what was actually audited, for targets where
+    that isn't obvious from `target_name` alone (e.g. a benchmark harness's
+    stock agent rather than a deployed product) — see `pipeline.run_audit`."""
 
 
 def build_report(
@@ -31,6 +35,7 @@ def build_report(
     plan: AuditPlan,
     score_summary: AuditScoreSummary,
     total_usd_spent: float,
+    environment_note: str | None = None,
 ) -> AuditReport:
     return AuditReport(
         target_name=profile.target_name,
@@ -38,6 +43,7 @@ def build_report(
         plan=plan,
         score_summary=score_summary,
         total_usd_spent=total_usd_spent,
+        environment_note=environment_note,
     )
 
 
@@ -61,6 +67,8 @@ def _render_markdown(report: AuditReport, scenarios_by_id: dict[str, Scenario]) 
     lines.append(f"# AI Risk Audit Report: {report.target_name}\n")
     lines.append(f"**Overall score: {report.score_summary.overall_score:.1f} / 100**\n")
     lines.append(f"Total model spend for this run: ${report.total_usd_spent:.4f}\n")
+    if report.environment_note:
+        lines.append(f"**Target environment:** {report.environment_note}\n")
 
     lines.append("## Target profile\n")
     lines.append(f"- **Summary:** {p.summary}")
