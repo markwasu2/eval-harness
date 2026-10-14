@@ -18,6 +18,10 @@ from pathlib import Path
 
 from ai_risk_audit.config import AuditConfig
 from ai_risk_audit.cost import BudgetExceededError, CostTracker
+from ai_risk_audit.execution.openai_cs_target_agent import (
+    OPENAI_CS_TARGET_MESSAGES_STORE_KEY,
+    make_openai_cs_target_agent,
+)
 from ai_risk_audit.execution.run import estimate_projected_usd, run_plan
 from ai_risk_audit.execution.target_agent import (
     TARGET_MESSAGES_STORE_KEY,
@@ -88,6 +92,32 @@ def run_audit(
                 "domain agent, stock environment/policy/tools, running locally against "
                 f"agent model {config.target_model.provider_model!r}. This is a "
                 "benchmark harness's reference agent, not a deployed product."
+            )
+        elif config.target_kind == "openai_cs":
+            target_agent = make_openai_cs_target_agent(
+                cost_tracker, config.target_model.provider_model
+            )
+            target_display_name = "openai-cs-agents-demo Airline Agent"
+            target_messages_store_key = OPENAI_CS_TARGET_MESSAGES_STORE_KEY
+            environment_note = (
+                "openai-cs-agents-demo (https://github.com/openai/openai-cs-agents-demo) "
+                "airline customer-service multi-agent demo (triage, flight info, "
+                "booking/cancellation, seat & special services, FAQ, refunds & "
+                "compensation, plus relevance/jailbreak input guardrails), running "
+                "locally with its own instructions/tools/handoffs/guardrails "
+                "UNCHANGED. DISCLOSED BACKEND SUBSTITUTION: this environment has no "
+                "OPENAI_API_KEY, so all 8 of the demo's agents (its 6 main agents, "
+                "normally gpt-5.2, plus its 2 input-guardrail agents, normally "
+                "gpt-4.1-mini) were swapped to run on Claude via litellm, using "
+                f"agent model {config.target_model.provider_model!r} instead of the "
+                "demo's own hardcoded OpenAI models — see "
+                "execution/openai_cs_target_agent.py. This is a backend "
+                "substitution, not a change to the target's own behavior. Known "
+                "reliability gap of this substitution: the 2 input-guardrail "
+                "agents' structured JSON output occasionally fails malformed-JSON "
+                "validation via litellm/Claude at a low rate not seen with the "
+                "demo's own gpt-4.1-mini; retried a bounded number of times "
+                "before surfacing as a real error (see that module's docstring)."
             )
         else:
             target_agent = acme_target_agent

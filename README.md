@@ -348,16 +348,55 @@ uv run ai-risk-audit demo --out audits/acme-demo
 
 `demo` runs the full pipeline end-to-end against the mock Acme target with
 no required flags. `run` takes a named target and profiler source material
-(`--source-text`/`--source-file`/`--source-url`, repeatable) against the
-same mock target — auditing a different target requires swapping the
-`target=` Agent passed to Petri in `execution/run.py`.
+(`--source-text`/`--source-file`/`--source-url`, repeatable); `--config`
+selects which target is actually driven via `AuditConfig.target_kind` (see
+`ai_risk_audit/config.py`): the mock Acme target (default), the tau2-bench
+airline agent (`configs/tau2_airline.yaml`), or the openai-cs-agents-demo
+airline agent (`configs/openai_cs.yaml`).
 
-### Current boundary
+### Other targets wired in: tau2-bench and openai-cs-agents-demo
 
-Execution always drives the mock Acme target; wiring in a different
-target (e.g. a real public demo agent reached via an API-shaped client,
-not browser automation) is a follow-up — swap the `target=` argument in
-`execution/run.py` for a new target `Agent` implementation.
+Besides the mock Acme target, two real public agents are wired in as
+`AuditConfig.target_kind` options, each via its own adapter in
+`ai_risk_audit/execution/` and its own config file:
+
+- **tau2-bench airline agent** (`target_kind: tau2_airline`,
+  `configs/tau2_airline.yaml`,
+  `ai_risk_audit/execution/tau_target_agent.py`) — a clone of
+  [tau2-bench](https://github.com/sierra-research/tau2-bench) run locally,
+  stock domain/policy/tools, with the auditor standing in for tau2's own
+  simulated user. Runs on its own configured model, no substitution.
+
+- **openai-cs-agents-demo airline agent** (`target_kind: openai_cs`,
+  `configs/openai_cs.yaml`,
+  `ai_risk_audit/execution/openai_cs_target_agent.py`) — a clone of
+  [openai-cs-agents-demo](https://github.com/openai/openai-cs-agents-demo)
+  run locally via its own `Agent`/`Runner.run()` objects (not its FastAPI/
+  ChatKit UI layer), with the auditor standing in for a human chat user.
+  **Disclosed backend substitution**: this environment has no
+  `OPENAI_API_KEY`, so all 8 of the demo's own agents (its 6 main agents,
+  normally `gpt-5.2`, plus its 2 input-guardrail agents in
+  `airline/guardrails.py`, normally `gpt-4.1-mini`) are swapped at runtime
+  to run on Claude via `litellm`, using `ANTHROPIC_API_KEY`, instead of the
+  demo's own hardcoded OpenAI models. The demo's own instructions, tools,
+  handoffs, and guardrail logic are otherwise completely unmodified — this
+  is a backend substitution, not a change to the target's behavior, and it
+  is also recorded in that target's `report.json`/`report.md`
+  (`environment_note`) and in `configs/openai_cs.yaml`'s own comments.
+  **Known reliability gap of this substitution**: the 2 input-guardrail
+  agents' structured JSON output occasionally fails malformed-JSON
+  validation when driven via litellm/Claude, at a rate not seen with the
+  demo's own `gpt-4.1-mini` (native JSON-schema response format vs.
+  litellm's best-effort tool-use coercion for Anthropic). The adapter
+  retries a bounded number of times before surfacing it as a real error —
+  see `openai_cs_target_agent.py`'s docstring.
+
+Both adapters are driven with the same execution pattern: a Petri target
+agent that speaks `TargetContext`'s handshake, runs the real agent's own
+turn loop internally (never letting the auditor fabricate tool results),
+and mirrors the target's own conversation into the Inspect sample store for
+scoring (`EvalSample.messages` is the auditor's own history, not the
+target's).
 
 ## Design choices and current boundaries
 

@@ -1,0 +1,73 @@
+# ai-risk-audit config for auditing the openai-cs-agents-demo airline
+# multi-agent system (https://github.com/openai/openai-cs-agents-demo)
+# running locally. See configs/tau2_airline.yaml for the structurally
+# identical tau2-bench config this mirrors, and
+# configs/audit_config.example.yaml for the mock-Acme-target baseline.
+#
+# DISCLOSED BACKEND SUBSTITUTION: this environment has no OPENAI_API_KEY, so
+# the demo cannot run on its own hardcoded OpenAI models (gpt-5.2 for its 6
+# main agents, gpt-4.1-mini for its 2 input-guardrail agents). Per explicit
+# user authorization, ai_risk_audit/execution/openai_cs_target_agent.py swaps
+# all 8 of those agents' .model to run on Claude via litellm instead, using
+# target_model below, routed through the ANTHROPIC_API_KEY already configured
+# for this pipeline. The demo's own instructions, tools, handoffs, and
+# guardrails are otherwise completely unmodified. This substitution is
+# recorded in the pipeline's report output (see pipeline.py's
+# environment_note for this target_kind) as well as here.
+#
+# target_model below is therefore the demo agent's own substituted "brain"
+# model (driven directly via litellm, not through this pipeline's ChatClient
+# -- see openai_cs_target_agent.py). Kept at the same cheap tier as the
+# auditor, never the judge tier.
+#
+# repeats/repeats_overrides/budgets mirror tau2_airline.yaml's own tuning
+# (see that file's comments for the repeats=4 / tool_call_abuse=8 rationale).
+#
+# KNOWN RELIABILITY GAP OF THE SUBSTITUTION: the demo's 2 input-guardrail
+# agents' structured JSON output occasionally fails malformed-JSON
+# validation when driven via litellm/Claude (not seen with the demo's own
+# gpt-4.1-mini, which uses OpenAI's native JSON-schema response format).
+# openai_cs_target_agent.py retries a bounded number of times before
+# surfacing it as a real error -- a reliability shim at the infrastructure
+# layer, not a change to the guardrails' own instructions/schema.
+
+target_kind: openai_cs
+
+profiler_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+planner_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 6000
+
+auditor_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+target_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+judge_model:
+  provider_model: claude-sonnet-4-6
+  temperature: 0.0
+  max_tokens: 2048
+
+petri_judge_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+scenarios_per_category: 2
+repeats: 4
+repeats_overrides:
+  tool_call_abuse: 8
+max_turns: 6
+budget_warn_usd: 5.0
+budget_abort_usd: 10.0
+reproducibility_tolerance: 10.0

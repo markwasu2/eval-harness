@@ -56,6 +56,14 @@ def test_load_repeats_overrides_from_yaml(tmp_path: Path) -> None:
     assert config.repeats_overrides == {RiskCategory.TOOL_CALL_ABUSE: 8}
 
 
+def test_load_openai_cs_target_kind_from_yaml(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump({"target_kind": "openai_cs"}))
+
+    config = load_config(path)
+    assert config.target_kind == "openai_cs"
+
+
 def test_missing_file_rejected(tmp_path: Path) -> None:
     with pytest.raises(AuditConfigError):
         load_config(tmp_path / "does-not-exist.yaml")

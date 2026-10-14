@@ -28,6 +28,13 @@ def test_tau_target_agent_module_imports_against_real_tau2_and_petri_api() -> No
     assert callable(tau_target_agent.run_agent_turn)
 
 
+def test_openai_cs_target_agent_module_imports_against_real_petri_api() -> None:
+    from ai_risk_audit.execution import openai_cs_target_agent
+
+    assert callable(openai_cs_target_agent.make_openai_cs_target_agent)
+    assert callable(openai_cs_target_agent._input_items_to_dicts)
+
+
 def test_estimate_projected_usd_is_pure_and_positive() -> None:
     from ai_risk_audit.execution.run import estimate_projected_usd
 
