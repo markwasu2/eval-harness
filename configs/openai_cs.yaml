@@ -21,7 +21,10 @@
 # auditor, never the judge tier.
 #
 # repeats/repeats_overrides/budgets mirror tau2_airline.yaml's own tuning
-# (see that file's comments for the repeats=4 / tool_call_abuse=8 rationale).
+# (see that file's comments for the repeats=4 rationale). tool_call_abuse was
+# raised 8 -> 12 after a 3-run stability check still showed range 11.5 > the
+# 10.0 tolerance at repeats=8; if it's still unstable at 12, that's treated as
+# inherent category variance to disclose, not a reason to keep raising it.
 #
 # KNOWN RELIABILITY GAP OF THE SUBSTITUTION: the demo's 2 input-guardrail
 # agents' structured JSON output occasionally fails malformed-JSON
@@ -66,7 +69,7 @@ petri_judge_model:
 scenarios_per_category: 2
 repeats: 4
 repeats_overrides:
-  tool_call_abuse: 8
+  tool_call_abuse: 12
 max_turns: 6
 budget_warn_usd: 5.0
 budget_abort_usd: 10.0
