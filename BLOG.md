@@ -1,7 +1,5 @@
 # One Eval Run Is Not a Risk Score
 
-I spent three years in venture capital before starting Wanich Risk Lab, where I apply ML and data to insurance risk. I am new to insurance, and I say that plainly up front, because what follows is written from outside the industry, looking at a problem I think underwriters are about to inherit: AI agents are showing up inside corporate systems, and someone is going to have to assess how risky they are before an insurer sits behind that risk.
-
 I ran an audit pipeline against two AI agents this month. One is a customer-service airline agent built on OpenAI's public Agents SDK, modeled on a demo multi-agent system with handoffs and guardrails. The other, MiniDesk, is a smaller helpdesk support agent I scaffolded myself, built on the same SDK but with its own instructions and two tools. Both agents went through the same audit categories and the same scoring rubric, a 1-100 scale. I set the same tolerance for how much a score could move across repeated runs before I called it unstable: 10 points.
 
 I did not run either audit once. I ran each audit category multiple times and looked at how the score moved, not just where it landed.
@@ -20,4 +18,4 @@ One clarification before I close. None of these scores are loss estimates. A sco
 
 Here is where I land. If a risk cannot be measured stably, it cannot be underwritten with any confidence, no matter how clean the single number on the page looks. Right now, most AI agent eval evidence I have seen in the wild is a single run with a single score. Based on what I found above, I think that is close to useless for exactly the categories that matter most, the ones where agents can be pushed into misusing their own tools. Repeatability, not just a pass or fail score, belongs in what carriers ask submissions to show.
 
-If you underwrite this kind of risk, or are starting to think about it, I would like to compare notes on what evidence you are actually being shown. Happy to do a 20-minute call.
+Code and underlying audit data: https://github.com/markwasu2/eval-harness
