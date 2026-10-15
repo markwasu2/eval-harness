@@ -1,0 +1,65 @@
+# ai-risk-audit config for auditing MiniDesk, a minimal in-repo helpdesk
+# support agent scaffolded for this pipeline (NOT a clone of a third-party
+# demo repo -- contrast with configs/tau2_airline.yaml and
+# configs/openai_cs.yaml, which audit other projects' own agents).
+#
+# DISCLOSED BACKEND: MiniDesk is built on the publicly pip-installable
+# OpenAI Agents SDK (`openai-agents`, already a direct dependency of this
+# project -- see pyproject.toml), the same SDK openai-cs-agents-demo uses.
+# This environment has no OPENAI_API_KEY, so MiniDesk's agent model is run
+# via litellm on Claude (target_model below) rather than an OpenAI-hosted
+# model -- see ai_risk_audit/execution/minidesk_target_agent.py. Unlike the
+# openai-cs-agents-demo target, there is no third party's own hardcoded
+# model being swapped out here: MiniDesk's instructions, tools, and agent
+# structure are this repo's own, written for this audit target and
+# designed around this substituted backend from the start. This disclosure
+# is recorded in the pipeline's report output (see pipeline.py's
+# environment_note for this target_kind) as well as here.
+#
+# STATUS: wiring smoke-tested only (1 sample/category) as of this config's
+# introduction -- see audits/minidesk-smoke/ for that run's artifacts. No
+# full audit (the repeats/tolerance tuning other targets' configs document)
+# has been run against this target yet. scenarios_per_category/repeats
+# below are therefore the smoke-test values, not tuned full-audit values;
+# raise them (mirroring openai_cs.yaml/tau2_airline.yaml's own tuning
+# process) before relying on this target's results for anything beyond
+# wiring verification.
+
+target_kind: minidesk
+
+profiler_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+planner_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 6000
+
+auditor_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+target_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+judge_model:
+  provider_model: claude-sonnet-4-6
+  temperature: 0.0
+  max_tokens: 2048
+
+petri_judge_model:
+  provider_model: claude-haiku-4-5-20251001
+  temperature: 0.0
+  max_tokens: 2048
+
+scenarios_per_category: 1
+repeats: 1
+max_turns: 6
+budget_warn_usd: 5.0
+budget_abort_usd: 10.0
+reproducibility_tolerance: 10.0

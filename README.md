@@ -351,14 +351,22 @@ no required flags. `run` takes a named target and profiler source material
 (`--source-text`/`--source-file`/`--source-url`, repeatable); `--config`
 selects which target is actually driven via `AuditConfig.target_kind` (see
 `ai_risk_audit/config.py`): the mock Acme target (default), the tau2-bench
-airline agent (`configs/tau2_airline.yaml`), or the openai-cs-agents-demo
-airline agent (`configs/openai_cs.yaml`).
+airline agent (`configs/tau2_airline.yaml`), the openai-cs-agents-demo
+airline agent (`configs/openai_cs.yaml`), or MiniDesk
+(`configs/minidesk.yaml`). For example:
 
-### Other targets wired in: tau2-bench and openai-cs-agents-demo
+```bash
+uv run ai-risk-audit run --config configs/minidesk.yaml \
+    --name "MiniDesk Support Agent" \
+    --source-text "MiniDesk is a helpdesk agent for a small SaaS product, with an FAQ search tool and an account-status lookup tool." \
+    --out audits/minidesk-smoke
+```
 
-Besides the mock Acme target, two real public agents are wired in as
-`AuditConfig.target_kind` options, each via its own adapter in
-`ai_risk_audit/execution/` and its own config file:
+### Other targets wired in: tau2-bench, openai-cs-agents-demo, and MiniDesk
+
+Besides the mock Acme target, two real public agents and one minimal
+in-repo agent are wired in as `AuditConfig.target_kind` options, each via
+its own adapter in `ai_risk_audit/execution/` and its own config file:
 
 - **tau2-bench airline agent** (`target_kind: tau2_airline`,
   `configs/tau2_airline.yaml`,
@@ -391,12 +399,29 @@ Besides the mock Acme target, two real public agents are wired in as
   retries a bounded number of times before surfacing it as a real error —
   see `openai_cs_target_agent.py`'s docstring.
 
-Both adapters are driven with the same execution pattern: a Petri target
-agent that speaks `TargetContext`'s handshake, runs the real agent's own
-turn loop internally (never letting the auditor fabricate tool results),
-and mirrors the target's own conversation into the Inspect sample store for
-scoring (`EvalSample.messages` is the auditor's own history, not the
-target's).
+- **MiniDesk** (`target_kind: minidesk`, `configs/minidesk.yaml`,
+  `ai_risk_audit/execution/minidesk_target_agent.py`) — a minimal helpdesk
+  support agent **scaffolded in this repo**, not a clone of a third-party
+  demo: one `Agent` (no multi-agent handoffs) with two tools, FAQ search
+  and account-status lookup, built on the same publicly pip-installable
+  OpenAI Agents SDK (`openai-agents`) the openai-cs-agents-demo target
+  uses. **Disclosed backend**: this environment has no `OPENAI_API_KEY`,
+  so MiniDesk's agent model runs via `litellm` on Claude rather than an
+  OpenAI-hosted model, using `ANTHROPIC_API_KEY` — see
+  `minidesk_target_agent.py`'s docstring. Unlike the openai-cs-agents-demo
+  target, there is no third party's own hardcoded model being swapped out
+  here: MiniDesk's instructions, tools, and agent structure are this
+  repo's own, written for this audit target and designed around this
+  substituted backend from the start. As of its introduction, MiniDesk has
+  only been smoke-tested (1 sample per category, `audits/minidesk-smoke/`)
+  to prove the wiring works — no full audit has been run against it yet.
+
+All three real-agent adapters are driven with the same execution pattern:
+a Petri target agent that speaks `TargetContext`'s handshake, runs the real
+agent's own turn loop internally (never letting the auditor fabricate tool
+results), and mirrors the target's own conversation into the Inspect
+sample store for scoring (`EvalSample.messages` is the auditor's own
+history, not the target's).
 
 ## Design choices and current boundaries
 

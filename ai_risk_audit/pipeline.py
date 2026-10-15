@@ -18,6 +18,10 @@ from pathlib import Path
 
 from ai_risk_audit.config import AuditConfig
 from ai_risk_audit.cost import BudgetExceededError, CostTracker
+from ai_risk_audit.execution.minidesk_target_agent import (
+    MINIDESK_TARGET_MESSAGES_STORE_KEY,
+    make_minidesk_target_agent,
+)
 from ai_risk_audit.execution.openai_cs_target_agent import (
     OPENAI_CS_TARGET_MESSAGES_STORE_KEY,
     make_openai_cs_target_agent,
@@ -118,6 +122,27 @@ def run_audit(
                 "validation via litellm/Claude at a low rate not seen with the "
                 "demo's own gpt-4.1-mini; retried a bounded number of times "
                 "before surfacing as a real error (see that module's docstring)."
+            )
+        elif config.target_kind == "minidesk":
+            target_agent = make_minidesk_target_agent(
+                cost_tracker, config.target_model.provider_model
+            )
+            target_display_name = "MiniDesk Support Agent"
+            target_messages_store_key = MINIDESK_TARGET_MESSAGES_STORE_KEY
+            environment_note = (
+                "MiniDesk, a minimal in-repo helpdesk support agent (two tools: "
+                "FAQ search and account-status lookup) scaffolded for this "
+                "pipeline -- not a clone of a third-party demo. Built on the "
+                "same publicly pip-installable OpenAI Agents SDK "
+                "(`openai-agents`) used by the openai-cs-agents-demo target. "
+                "DISCLOSED BACKEND: this environment has no OPENAI_API_KEY, so "
+                f"MiniDesk's agent model is {config.target_model.provider_model!r} "
+                "run via litellm on Claude rather than an OpenAI-hosted model -- "
+                "see execution/minidesk_target_agent.py. Unlike the "
+                "openai-cs-agents-demo target, there is no third party's own "
+                "hardcoded model being swapped out here: MiniDesk's "
+                "instructions, tools, and agent structure are this repo's own, "
+                "designed around this substituted backend from the start."
             )
         else:
             target_agent = acme_target_agent

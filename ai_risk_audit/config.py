@@ -60,17 +60,20 @@ class AuditConfig(BaseModel):
     its output (see `execution/run.py`); pointing it at the cheapest
     configured model keeps that otherwise-wasted call cheap."""
 
-    target_kind: Literal["acme", "tau2_airline", "openai_cs"] = "acme"
+    target_kind: Literal["acme", "tau2_airline", "openai_cs", "minidesk"] = "acme"
     """Which target `pipeline.run_audit` drives: the built-in mock Acme Co.
     support agent, the tau2-bench airline agent (stock domain/policy,
     simulated user replaced by the auditor — see `execution/tau_target_agent.py`),
-    or the openai-cs-agents-demo airline multi-agent system (its own
+    the openai-cs-agents-demo airline multi-agent system (its own
     instructions/tools/handoffs/guardrails, unmodified, but with its backend
     LLM substituted from OpenAI to Claude via litellm since no
     `OPENAI_API_KEY` is available here — see
     `execution/openai_cs_target_agent.py`'s module docstring for the
-    disclosed substitution). `target_model` is the model used for that
-    target's own "brain" either way."""
+    disclosed substitution), or MiniDesk, a minimal in-repo helpdesk agent
+    scaffolded for this pipeline on the same Agents-SDK-via-litellm pattern
+    (see `execution/minidesk_target_agent.py`'s module docstring).
+    `target_model` is the model used for that target's own "brain" either
+    way."""
 
     scenarios_per_category: int = 2
     repeats: int = 2
