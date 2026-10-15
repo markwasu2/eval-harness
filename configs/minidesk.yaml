@@ -16,14 +16,14 @@
 # is recorded in the pipeline's report output (see pipeline.py's
 # environment_note for this target_kind) as well as here.
 #
-# STATUS: wiring smoke-tested only (1 sample/category) as of this config's
-# introduction -- see audits/minidesk-smoke/ for that run's artifacts. No
-# full audit (the repeats/tolerance tuning other targets' configs document)
-# has been run against this target yet. scenarios_per_category/repeats
-# below are therefore the smoke-test values, not tuned full-audit values;
-# raise them (mirroring openai_cs.yaml/tau2_airline.yaml's own tuning
-# process) before relying on this target's results for anything beyond
-# wiring verification.
+# STATUS: wiring smoke-tested (1 sample/category, audits/minidesk-smoke/),
+# then promoted directly to the full-audit protocol below -- scenarios_per_
+# category/repeats/repeats_overrides mirror configs/openai_cs.yaml's own
+# repeats=12 protocol exactly (2 scenarios/category, repeats=4 globally,
+# tool_call_abuse overridden to 12), so MiniDesk's 3 full runs
+# (audits/minidesk-run1/2/3) are directly comparable to the Airline Agent's
+# run4/5/6. See REPORT.md for the resulting stability table and the
+# cross-target comparison.
 
 target_kind: minidesk
 
@@ -57,8 +57,10 @@ petri_judge_model:
   temperature: 0.0
   max_tokens: 2048
 
-scenarios_per_category: 1
-repeats: 1
+scenarios_per_category: 2
+repeats: 4
+repeats_overrides:
+  tool_call_abuse: 12
 max_turns: 6
 budget_warn_usd: 5.0
 budget_abort_usd: 10.0
